@@ -155,8 +155,9 @@ jobs:
           $content = Get-Content $appJsonPath -Raw
           $appJson = $content | ConvertFrom-Json
           $v = [System.Version]$appJson.version
-          $newVersion = "$($v.Major).$($v.Minor).$($v.Build).$($v.Revision + 1)"
-          $content = $content -replace '"version":\s*"[^"]*"', "\"version\": \"$newVersion\""
+          $newVersion = '{0}.{1}.{2}.{3}' -f $v.Major, $v.Minor, $v.Build, ($v.Revision + 1)
+          $replacement = '"version": "' + $newVersion + '"'
+          $content = $content -replace '"version":\s*"[^"]*"', $replacement
           [System.IO.File]::WriteAllText((Resolve-Path $appJsonPath).Path, $content)
           Write-Host "Bumped version to $newVersion"
           git config user.name "github-actions[bot]"
