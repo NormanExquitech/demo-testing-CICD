@@ -6,15 +6,8 @@
   "appFolders": [
     "app"
   ],
-  "testFolders": [],
-  "bcptTestFolders": [],
-  "installTestRunner": false,
-  "installTestFramework": false,
-  "installTestLibraries": false,
-  "installPerformanceToolkit": false,
   "enableCodeCop": false,
   "enableAppSourceCop": false,
   "enablePerTenantExtensionCop": false,
-  "enableUICop": false,
-  "doNotRunTests": true
+  "enableUICop": false
 }
