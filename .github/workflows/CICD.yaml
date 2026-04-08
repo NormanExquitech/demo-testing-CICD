@@ -15,7 +15,7 @@ defaults:
 
 permissions:
   actions: read
-  contents: read
+  contents: write
   id-token: write
   packages: read
 
@@ -136,8 +136,39 @@ jobs:
           token: ${{ fromJson(steps.ReadSecrets.outputs.Secrets).ghTokenWorkflow }}
           downloadLatest: true
 
-  Build:
+  BumpVersion:
     needs: [ Initialization ]
+    runs-on: windows-latest
+    outputs:
+      newSha: ${{ steps.bump.outputs.newSha }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          token: ${{ secrets.GHTOKEN }}
+
+      - name: Bump app.json revision
+        id: bump
+        shell: powershell
+        run: |
+          $appJsonPath = "app/app.json"
+          $content = Get-Content $appJsonPath -Raw
+          $appJson = $content | ConvertFrom-Json
+          $v = [System.Version]$appJson.version
+          $newVersion = "$($v.Major).$($v.Minor).$($v.Build).$($v.Revision + 1)"
+          $content = $content -replace '"version":\s*"[^"]*"', "\"version\": \"$newVersion\""
+          [System.IO.File]::WriteAllText((Resolve-Path $appJsonPath).Path, $content)
+          Write-Host "Bumped version to $newVersion"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add $appJsonPath
+          git commit -m "chore: bump version to $newVersion [skip ci]"
+          git push
+          $newSha = git rev-parse HEAD
+          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "newSha=$newSha"
+
+  Build:
+    needs: [ Initialization, BumpVersion ]
     if: (!failure()) && (!cancelled()) && fromJson(needs.Initialization.outputs.buildOrderJson)[0].projectsCount > 0
     strategy:
       matrix:
@@ -149,6 +180,7 @@ jobs:
     with:
       shell: ${{ matrix.githubRunnerShell }}
       runsOn: ${{ matrix.githubRunner }}
+      checkoutRef: ${{ needs.BumpVersion.outputs.newSha }}
       project: ${{ matrix.project }}
       projectName: ${{ matrix.projectName }}
       buildMode: ${{ matrix.buildMode }}
@@ -219,7 +251,7 @@ jobs:
           deploymentEnvironmentsJson: ${{ needs.Initialization.outputs.deploymentEnvironmentsJson }}
 
   PostProcess:
-    needs: [ Initialization, Build, Deploy ]
+    needs: [ Initialization, BumpVersion, Build, Deploy ]
     if: (!cancelled())
     runs-on: [ windows-latest ]
     steps:

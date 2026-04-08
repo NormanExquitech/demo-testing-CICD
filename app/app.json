@@ -2,7 +2,7 @@
   "id": "f8a3c1e2-4b7d-4e91-9f2a-1d8c7e5b3a0f",
   "name": "DemoCICD",
   "publisher": "Default Publisher",
-  "version": "1.0.0.1",
+  "version": "1.7.0.0",
   "brief": "Demo CI/CD Extension for Business Central",
   "description": "Starter extension for testing the CI/CD pipeline with AL-Go for GitHub",
   "privacyStatement": "",
