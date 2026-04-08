@@ -2,7 +2,7 @@
   "$schema": "https://raw.githubusercontent.com/microsoft/AL-Go-Actions/v8.3/.Modules/settings.schema.json",
   "country": "w1",
   "useCompilerFolder": true,
-  "doNotPublishApps": false,
+  "doNotPublishApps": true,
   "appFolders": [
     "app"
   ],
