@@ -1,0 +1,20 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/AL-Go-Actions/v8.3/.Modules/settings.schema.json",
+  "country": "w1",
+  "appFolders": [
+    "app"
+  ],
+  "testFolders": [
+    "tests"
+  ],
+  "bcptTestFolders": [],
+  "installTestRunner": true,
+  "installTestFramework": true,
+  "installTestLibraries": false,
+  "installPerformanceToolkit": false,
+  "enableCodeCop": true,
+  "enableAppSourceCop": false,
+  "enablePerTenantExtensionCop": true,
+  "enableUICop": false,
+  "doNotRunTests": false
+}

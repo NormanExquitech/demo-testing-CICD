@@ -18,5 +18,11 @@ rad.json
 *.g.xlf
 #License-file
 *.flf
+#AL-Go build artifacts
+.buildartifacts/
+.artifacts/
+.altestrunner/
+BuildOutput.txt
+ContainerEventLog.evtx
 #Test results file
 TestResults.xml
