@@ -3,7 +3,7 @@
   "country": "w1",
   "useCompilerFolder": true,
   "doNotPublishApps": true,
-  "versioningStrategy": 2,
+  "versioningStrategy": 0,
   "appFolders": [
     "app"
   ],
