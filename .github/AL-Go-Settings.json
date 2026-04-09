@@ -2,5 +2,6 @@
   "$schema": "https://raw.githubusercontent.com/microsoft/AL-Go-Actions/v8.3/.Modules/settings.schema.json",
   "type": "PTE",
   "templateUrl": "https://github.com/microsoft/AL-Go-PTE@v8.3",
-  "repoVersion": "1.0"
+  "repoVersion": "1.0",
+  "templateSha": "30ce9f104b093e803af72a363f5fd843c10788b5"
 }
