@@ -136,47 +136,8 @@ jobs:
           token: ${{ fromJson(steps.ReadSecrets.outputs.Secrets).ghTokenWorkflow }}
           downloadLatest: true
 
-  BumpVersion:
-    needs: [ Initialization ]
-    runs-on: windows-latest
-    outputs:
-      newSha: ${{ steps.bump.outputs.newSha }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          token: ${{ github.token }}
-          fetch-depth: 0
-
-      - name: Bump app.json revision
-        id: bump
-        shell: powershell
-        run: |
-          $appJsonPath = "app/app.json"
-          $settingsPath = ".AL-Go/settings.json"
-          $content = Get-Content $appJsonPath -Raw
-          $appJson = $content | ConvertFrom-Json
-          $v = [System.Version]$appJson.version
-          $newRevision = $v.Revision + 1
-          $newVersion = '{0}.{1}.{2}.{3}' -f $v.Major, $v.Minor, $v.Build, $newRevision
-          $replacement = '"version": "' + $newVersion + '"'
-          $content = $content -replace '"version":\s*"[^"]*"', $replacement
-          [System.IO.File]::WriteAllText((Resolve-Path $appJsonPath).Path, $content)
-          $settings = Get-Content $settingsPath -Raw | ConvertFrom-Json
-          $settings | Add-Member -MemberType NoteProperty -Name 'appBuild' -Value $v.Build -Force
-          $settings | Add-Member -MemberType NoteProperty -Name 'appRevision' -Value $newRevision -Force
-          $settings | ConvertTo-Json -Depth 10 | Set-Content $settingsPath -Encoding UTF8
-          Write-Host "Bumped version to $newVersion"
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add $appJsonPath $settingsPath
-          git commit -m "chore: bump version to $newVersion [skip ci]"
-          git push
-          $newSha = git rev-parse HEAD
-          Add-Content -Encoding UTF8 -Path $env:GITHUB_OUTPUT -Value "newSha=$newSha"
-
   Build:
-    needs: [ Initialization, BumpVersion ]
+    needs: [ Initialization ]
     if: (!failure()) && (!cancelled()) && fromJson(needs.Initialization.outputs.buildOrderJson)[0].projectsCount > 0
     strategy:
       matrix:
@@ -188,7 +149,6 @@ jobs:
     with:
       shell: ${{ matrix.githubRunnerShell }}
       runsOn: ${{ matrix.githubRunner }}
-      checkoutRef: ${{ needs.BumpVersion.outputs.newSha }}
       project: ${{ matrix.project }}
       projectName: ${{ matrix.projectName }}
       buildMode: ${{ matrix.buildMode }}
@@ -258,8 +218,43 @@ jobs:
           type: 'CD'
           deploymentEnvironmentsJson: ${{ needs.Initialization.outputs.deploymentEnvironmentsJson }}
 
+  BumpVersion:
+    needs: [ Deploy ]
+    if: success()
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          token: ${{ github.token }}
+          fetch-depth: 0
+
+      - name: Bump app.json revision after deployment
+        shell: powershell
+        run: |
+          $appJsonPath = "app/app.json"
+          $settingsPath = ".AL-Go/settings.json"
+          $content = Get-Content $appJsonPath -Raw
+          $appJson = $content | ConvertFrom-Json
+          $v = [System.Version]$appJson.version
+          $newBuild = $v.Build + 1
+          $newVersion = '{0}.{1}.{2}.{3}' -f $v.Major, $v.Minor, $newBuild, 0
+          $replacement = '"version": "' + $newVersion + '"'
+          $content = $content -replace '"version":\s*"[^"]*"', $replacement
+          [System.IO.File]::WriteAllText((Resolve-Path $appJsonPath).Path, $content)
+          $settings = Get-Content $settingsPath -Raw | ConvertFrom-Json
+          $settings | Add-Member -MemberType NoteProperty -Name 'appBuild' -Value $newBuild -Force
+          $settings | Add-Member -MemberType NoteProperty -Name 'appRevision' -Value 0 -Force
+          $settings | ConvertTo-Json -Depth 10 | Set-Content $settingsPath -Encoding UTF8
+          Write-Host "Bumped version from $($appJson.version) to $newVersion"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add $appJsonPath $settingsPath
+          git commit -m "chore: bump version to $newVersion [skip ci]"
+          git push
+
   PostProcess:
-    needs: [ Initialization, BumpVersion, Build, Deploy ]
+    needs: [ Initialization, Build, Deploy, BumpVersion ]
     if: (!cancelled())
     runs-on: [ windows-latest ]
     steps:
