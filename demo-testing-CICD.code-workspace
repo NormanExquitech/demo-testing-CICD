@@ -1,0 +1,13 @@
+{
+  "folders": [
+    {
+      "name": "app",
+      "path": "app"
+    },
+    {
+      "name": "repo",
+      "path": "."
+    }
+  ],
+  "settings": {}
+}
