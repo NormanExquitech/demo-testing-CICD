@@ -359,35 +359,6 @@ jobs:
           artifactsFolder: '.artifacts'
           deploymentEnvironmentsJson: ${{ needs.Initialization.outputs.deploymentEnvironmentsJson }}
 
-  BumpVersion:
-    needs: [ Deploy ]
-    if: success()
-    runs-on: windows-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          token: ${{ github.token }}
-          fetch-depth: 0
-
-      - name: Bump app.json revision after deployment
-        shell: powershell
-        run: |
-          $appJsonPath = "app/app.json"
-          $content = Get-Content $appJsonPath -Raw
-          $appJson = $content | ConvertFrom-Json
-          $v = [System.Version]$appJson.version
-          $newVersion = '{0}.{1}.{2}.{3}' -f $v.Major, $v.Minor, $env:GITHUB_RUN_NUMBER, 0
-          $replacement = '"version": "' + $newVersion + '"'
-          $content = $content -replace '"version":\s*"[^"]*"', $replacement
-          [System.IO.File]::WriteAllText((Resolve-Path $appJsonPath).Path, $content)
-          Write-Host "Updated version from $($appJson.version) to $newVersion"
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add $appJsonPath
-          git commit -m "chore: set version to $newVersion [skip ci]"
-          git push
-
   Deliver:
     needs: [ Initialization, Build ]
     if: (!cancelled()) && (needs.Build.result == 'success' || needs.Build.result == 'skipped') && needs.Initialization.outputs.deliveryTargetsJson != '[]'
