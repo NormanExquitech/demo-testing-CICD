@@ -388,7 +388,7 @@ BumpVersion:
           git commit -m "chore: set version to $newVersion [skip ci]"
           git push
 
-  Deliver:
+Deliver:
     needs: [ Initialization, Build ]
     if: (!cancelled()) && (needs.Build.result == 'success' || needs.Build.result == 'skipped') && needs.Initialization.outputs.deliveryTargetsJson != '[]'
     strategy:
@@ -430,7 +430,7 @@ BumpVersion:
           deliveryTarget: ${{ matrix.deliveryTarget }}
           artifacts: '.artifacts'
 
-  PostProcess:
+PostProcess:
     needs: [ Initialization, Build, Deploy, Deliver, DeployALDoc, CodeAnalysisUpload ]
     if: (!cancelled())
     runs-on: [ windows-latest ]
