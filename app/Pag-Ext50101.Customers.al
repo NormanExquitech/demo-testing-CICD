@@ -1,4 +1,4 @@
-pageextension 50101 Customers extends Customers
+pageextension 50101 Customers extends "Customer List"
 {
     trigger OnOpenPage()
     begin
