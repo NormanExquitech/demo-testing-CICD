@@ -233,24 +233,18 @@ jobs:
         shell: powershell
         run: |
           $appJsonPath = "app/app.json"
-          $settingsPath = ".AL-Go/settings.json"
           $content = Get-Content $appJsonPath -Raw
           $appJson = $content | ConvertFrom-Json
           $v = [System.Version]$appJson.version
-          $newBuild = $v.Build + 1
-          $newVersion = '{0}.{1}.{2}.{3}' -f $v.Major, $v.Minor, $newBuild, 0
+          $newVersion = '{0}.{1}.{2}.{3}' -f $v.Major, $v.Minor, $env:GITHUB_RUN_NUMBER, 0
           $replacement = '"version": "' + $newVersion + '"'
           $content = $content -replace '"version":\s*"[^"]*"', $replacement
           [System.IO.File]::WriteAllText((Resolve-Path $appJsonPath).Path, $content)
-          $settings = Get-Content $settingsPath -Raw | ConvertFrom-Json
-          $settings | Add-Member -MemberType NoteProperty -Name 'appBuild' -Value $newBuild -Force
-          $settings | Add-Member -MemberType NoteProperty -Name 'appRevision' -Value 0 -Force
-          $settings | ConvertTo-Json -Depth 10 | Set-Content $settingsPath -Encoding UTF8
-          Write-Host "Bumped version from $($appJson.version) to $newVersion"
+          Write-Host "Updated version from $($appJson.version) to $newVersion"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add $appJsonPath $settingsPath
-          git commit -m "chore: bump version to $newVersion [skip ci]"
+          git add $appJsonPath
+          git commit -m "chore: set version to $newVersion [skip ci]"
           git push
 
   PostProcess:

@@ -1,16 +1,14 @@
 ﻿{
-    "$schema":  "https://raw.githubusercontent.com/microsoft/AL-Go-Actions/v8.3/.Modules/settings.schema.json",
-    "country":  "w1",
-    "useCompilerFolder":  true,
-    "doNotPublishApps":  true,
-    "versioningStrategy":  0,
-    "appFolders":  [
-                       "app"
-                   ],
-    "enableCodeCop":  false,
-    "enableAppSourceCop":  false,
-    "enablePerTenantExtensionCop":  false,
-    "enableUICop":  false,
-    "appBuild":  0,
-    "appRevision":  1
+  "$schema": "https://raw.githubusercontent.com/microsoft/AL-Go-Actions/v8.3/.Modules/settings.schema.json",
+  "country": "w1",
+  "useCompilerFolder": true,
+  "doNotPublishApps": true,
+  "versioningStrategy": 0,
+  "appFolders": [
+    "app"
+  ],
+  "enableCodeCop": false,
+  "enableAppSourceCop": false,
+  "enablePerTenantExtensionCop": false,
+  "enableUICop": false
 }
