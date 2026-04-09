@@ -244,7 +244,7 @@ jobs:
           deploymentEnvironmentsJson: ${{ needs.Initialization.outputs.deploymentEnvironmentsJson }}
 
   BumpVersion:
-    needs: [ Build ]
+    needs: [ Deploy ]
     runs-on: windows-latest
     steps:
       - name: Checkout
