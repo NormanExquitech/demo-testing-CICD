@@ -15,7 +15,7 @@ defaults:
 
 permissions:
   actions: read
-  contents: read
+  contents: write
   id-token: write
   pages: read
   security-events: write
@@ -150,37 +150,6 @@ jobs:
           getEnvironments: '*'
           type: 'CD'
 
-  CheckForUpdates:
-    needs: [ Initialization ]
-    runs-on: [ windows-latest ]
-    steps:
-      - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-
-      - name: Read settings
-        uses: microsoft/AL-Go-Actions/ReadSettings@v8.3
-        with:
-          shell: powershell
-          get: templateUrl
-
-      - name: Read secrets
-        id: ReadSecrets
-        uses: microsoft/AL-Go-Actions/ReadSecrets@v8.3
-        with:
-          shell: powershell
-          gitHubSecrets: ${{ toJson(secrets) }}
-          getSecrets: 'ghTokenWorkflow'
-
-      - name: Check for updates to AL-Go system files
-        uses: microsoft/AL-Go-Actions/CheckForUpdates@v8.3
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        with:
-          shell: powershell
-          templateUrl: ${{ env.templateUrl }}
-          token: ${{ fromJson(steps.ReadSecrets.outputs.Secrets).ghTokenWorkflow }}
-          downloadLatest: true
-
   Build:
     needs: [ Initialization ]
     if: (!failure()) && (!cancelled()) && fromJson(needs.Initialization.outputs.buildOrderJson)[0].projectsCount > 0
@@ -205,91 +174,6 @@ jobs:
       signArtifacts: true
       useArtifactCache: true
       needsContext:  ${{ toJson(needs) }}
-
-  CodeAnalysisUpload:
-    needs: [ Initialization, Build ]
-    if: (!cancelled()) && (needs.Initialization.outputs.trackALAlertsInGitHub == 'True')
-    runs-on: [ windows-latest ]
-    name: Code Analysis Processing
-    steps:
-      - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-
-      - name: Download artifacts - ErrorLogs
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
-        if: (success() || failure())
-        with:
-          pattern: '*-*ErrorLogs-*'
-          path: '${{ github.workspace }}/ErrorLogs/'
-          merge-multiple: true
-
-      - name: Process AL Code Analysis Logs
-        id: ProcessALCodeAnalysisLogs
-        if: (success() || failure())
-        uses: microsoft/AL-Go-Actions/ProcessALCodeAnalysisLogs@v8.3
-        with:
-          shell: powershell
-
-      - name: Upload SARIF file to GitHub
-        uses: github/codeql-action/upload-sarif@v4
-        if: (success() || failure()) && (hashFiles(format('{0}/ErrorLogs/output.sarif.json',github.workspace)) != '')
-        with:
-          sarif_file: '${{ github.workspace }}/ErrorLogs/output.sarif.json'
-          category: "ALCodeAnalysis"
-
-  DeployALDoc:
-    needs: [ Initialization, Build ]
-    if: (!cancelled()) && (needs.Build.result == 'success' || needs.Build.result == 'skipped') && needs.Initialization.outputs.generateALDocArtifact == 1 && github.ref_name == 'main'
-    runs-on: [ windows-latest ]
-    name: Deploy Reference Documentation
-    permissions:
-      contents: read
-      actions: read
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-
-      - name: Download artifacts
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
-        with:
-          path: '.artifacts'
-
-      - name: Read settings
-        uses: microsoft/AL-Go-Actions/ReadSettings@v8.3
-        with:
-          shell: powershell
-
-      - name: Determine ArtifactUrl
-        id: determineArtifactUrl
-        uses: microsoft/AL-Go-Actions/DetermineArtifactUrl@v8.3
-        with:
-          shell: powershell
-
-      - name: Setup Pages
-        if: needs.Initialization.outputs.deployALDocArtifact == 1
-        uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5.0.0
-
-      - name: Build Reference Documentation
-        uses: microsoft/AL-Go-Actions/BuildReferenceDocumentation@v8.3
-        with:
-          shell: powershell
-          artifacts: '.artifacts'
-          artifactUrl: ${{ env.artifact }}
-
-      - name: Upload pages artifact
-        uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4.0.0
-        with:
-          path: ".aldoc/_site/"
-
-      - name: Deploy to GitHub Pages
-        if: needs.Initialization.outputs.deployALDocArtifact == 1
-        id: deployment
-        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4.0.5
 
   Deploy:
     needs: [ Initialization, Build ]
@@ -359,50 +243,36 @@ jobs:
           artifactsFolder: '.artifacts'
           deploymentEnvironmentsJson: ${{ needs.Initialization.outputs.deploymentEnvironmentsJson }}
 
-  Deliver:
-    needs: [ Initialization, Build ]
-    if: (!cancelled()) && (needs.Build.result == 'success' || needs.Build.result == 'skipped') && needs.Initialization.outputs.deliveryTargetsJson != '[]'
-    strategy:
-      matrix:
-        deliveryTarget: ${{ fromJson(needs.Initialization.outputs.deliveryTargetsJson) }}
-      fail-fast: false
-    runs-on: [ windows-latest ]
-    name: Deliver to ${{ matrix.deliveryTarget }}
+  BumpVersion:
+    needs: [ Build ]
+    runs-on: windows-latest
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-
-      - name: Download artifacts
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
-          path: '.artifacts'
+          token: ${{ github.token }}
+          fetch-depth: 0
 
-      - name: Read settings
-        uses: microsoft/AL-Go-Actions/ReadSettings@v8.3
-        with:
-          shell: powershell
-
-      - name: Read secrets
-        id: ReadSecrets
-        uses: microsoft/AL-Go-Actions/ReadSecrets@v8.3
-        with:
-          shell: powershell
-          gitHubSecrets: ${{ toJson(secrets) }}
-          getSecrets: '${{ matrix.deliveryTarget }}Context'
-
-      - name: Deliver
-        uses: microsoft/AL-Go-Actions/Deliver@v8.3
-        env:
-          Secrets: '${{ steps.ReadSecrets.outputs.Secrets }}'
-        with:
-          shell: powershell
-          type: 'CD'
-          projects: ${{ needs.Initialization.outputs.projects }}
-          deliveryTarget: ${{ matrix.deliveryTarget }}
-          artifacts: '.artifacts'
+      - name: Bump app.json revision after deployment
+        shell: powershell
+        run: |
+          $appJsonPath = "app/app.json"
+          $content = Get-Content $appJsonPath -Raw
+          $appJson = $content | ConvertFrom-Json
+          $v = [System.Version]$appJson.version
+          $newVersion = '{0}.{1}.{2}.{3}' -f $v.Major, $v.Minor, $env:GITHUB_RUN_NUMBER, 0
+          $replacement = '"version": "' + $newVersion + '"'
+          $content = $content -replace '"version":\s*"[^"]*"', $replacement
+          [System.IO.File]::WriteAllText((Resolve-Path $appJsonPath).Path, $content)
+          Write-Host "Updated version from $($appJson.version) to $newVersion"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add $appJsonPath
+          git commit -m "chore: set version to $newVersion [skip ci]"
+          git push
 
   PostProcess:
-    needs: [ Initialization, Build, Deploy, Deliver, DeployALDoc, CodeAnalysisUpload ]
+    needs: [ Initialization, Build, Deploy ]
     if: (!cancelled())
     runs-on: [ windows-latest ]
     steps:
