@@ -1,9 +1,7 @@
-codeunit 50100 "Hello World"
+pageextension 50100 CustomerListExt extends "Customer List"
 {
-    procedure GetGreeting(Name: Text): Text
+    trigger OnOpenPage()
     begin
-        if Name = '' then
-            exit('Hello, World!');
-        exit(StrSubstNo('Hello, %1!', Name));
+        Message('App published: Hello world');
     end;
 }
